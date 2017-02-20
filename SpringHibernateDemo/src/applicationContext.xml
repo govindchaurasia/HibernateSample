@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans  
+    xmlns="http://www.springframework.org/schema/beans"  
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
+    xmlns:p="http://www.springframework.org/schema/p"  
+    xsi:schemaLocation="http://www.springframework.org/schema/beans  
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">  
+        
+        <bean id="students" class="com.spring.hibernate.Students">
+        	<property name="name" value="Govind"></property>
+        	<property name="age" value="26"></property>
+        	<property name="address" value="Wadala"></property>
+        	<property name="admission" ref="adm"></property>
+        	<property name="list">
+        		<list>
+        		<value>FY</value>
+        		<value>SY</value>
+        		<value>TY</value>
+        		</list>
+        	</property>
+        	<property name="listAdmission">
+        		<list>
+        			<ref bean="adm"></ref>
+        		</list>
+        	</property>
+        </bean>
+        <bean id="adm" class="com.spring.hibernate.Admission">
+           <property name="course" value="M.Sc.IT"></property>
+           <property name="fees" value="30000"></property>
+        </bean>
+        
+  </beans>
