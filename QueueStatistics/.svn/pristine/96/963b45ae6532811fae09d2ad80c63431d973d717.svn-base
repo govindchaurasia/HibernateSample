@@ -1,0 +1,46 @@
+package com.interactcrm.qstats.classes;
+
+
+
+
+
+
+
+
+public class QueueStatsManagerFactory {
+
+	public static IQueueStatsManager getInstance(int channelId,int tenantGroupId,int queueGroup){
+		
+		IQueueStatsManager updater	=	null;
+		
+		//if(dashBoardId == -1 && queueList==null ){
+			switch(channelId){
+			
+			case 2 : 
+				updater	=	new VoiceQueueStatManager(channelId, queueGroup, tenantGroupId);
+				break;
+			case 1 : 				
+			case 3 : 					
+			case 4 : 			
+			case 5 : 			
+			case 6 : 				
+			case 7 : 				
+				updater	=	new NonVoiceQueueStatManager(channelId, queueGroup, tenantGroupId);
+				break;
+			//SP channel	
+			case 10:
+				updater	=	new VoiceQueueStatManager(channelId, queueGroup, tenantGroupId);
+				break;
+				
+			
+		}
+		/*}else{
+			updater	=	new DashboardManager(dashBoardId,queueList,thersholdbean);
+			
+		}*/
+		
+		
+		
+		return updater;
+	}
+}

@@ -1,0 +1,509 @@
+package com.interactcrm.qstats.threads;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Types;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
+import java.util.StringTokenizer;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.interactcrm.logging.Log;
+import com.interactcrm.logging.factory.LogModuleFactory;
+import com.interactcrm.qstats.bean.TherSholdBean;
+import com.interactcrm.qstats.dao.QueueStatsDAO;
+import com.interactcrm.qstats.db.MMConnectionPool;
+import com.interactcrm.util.logging.LogHelper;
+import com.interactcrm.utils.Utility;
+
+public class DashboardVoiceProcessor implements Runnable{
+
+	int processor_Sleeptime;
+	int dashboardId;
+	List<TherSholdBean> therSholdBean;
+	List <Integer> queueList;
+	boolean _debugLog 		= false;
+    boolean _errorLog 		= false;
+    boolean _infoLog 		= false;
+    Log _logger 			= null;
+	
+	public DashboardVoiceProcessor(int dashboardId, int processor_Sleeptime,List<Integer> queueList,List<TherSholdBean> therSholdBean) {
+		
+		this.processor_Sleeptime	= processor_Sleeptime;
+		this.dashboardId			= dashboardId;
+		this.queueList			= queueList;
+		this.therSholdBean	=	therSholdBean;
+	
+		_logger 				= new LogHelper(DashboardVoiceProcessor.class).getLogger(LogModuleFactory.getModule("DashboardVoiceProcessor"), String.valueOf(dashboardId));		
+	        
+        if (_logger != null) {
+            _debugLog = _logger.isDebugEnabled();
+            _errorLog = _logger.isErrorEnabled();
+            _infoLog = _logger.isInfoEnabled();
+        }
+        if (_logger.isDebugEnabled()) {
+			_logger.debug("DashboardVoiceProcessor:: Parameters Passed ----> dashboardId[] processor sleep time[] queueList[] "
+					+ dashboardId +"sleep time "+processor_Sleeptime+queueList);
+		}
+        
+	}
+	
+	@Override
+	public void run() {
+		Connection dbConnection			 		= null;
+		while(true){	
+						
+			try{
+				dbConnection =MMConnectionPool.getDerbyConnection();
+			}catch(Exception e){
+				if (_errorLog) {
+					_logger.error("run :: Error while fetching derby dayabase connection ", e);
+				}
+			}
+			updateFanucDisplayTable(dashboardId,queueList,therSholdBean,dbConnection);
+			updateFanucEmailDisplayTable(dashboardId,queueList,therSholdBean,dbConnection);
+			
+			if (dbConnection != null) {
+				try {
+					MMConnectionPool.freeDerbyConnection(dbConnection);
+				} catch (Exception ex) {
+					if (_errorLog) {
+						_logger.error("run :: Error while releasing derby dayabase connection ", ex);
+					}
+				}
+				//dbConnection = null;
+			}
+			try {
+				  if (_logger.isDebugEnabled()) {
+					  _logger.debug("processor_sleeptime"+processor_Sleeptime * 1000);
+				  }
+				Thread.sleep(processor_Sleeptime * 1000);
+			} catch (InterruptedException ie) {
+				if (_errorLog) {
+					_logger.error("Processor :: "
+							+  " ", ie);
+				}
+			}
+		}
+	}
+
+	private void updateFanucEmailDisplayTable(int dashboardId,List<Integer> queueList,List<TherSholdBean> therSholdBean,Connection dbConnection) {
+
+	 	Connection derbyConnection			 		= null;
+		PreparedStatement selectStatement		= null;
+		ResultSet selectResultSet				= null,fetchThersholds=null;
+		PreparedStatement updateStatement		= null;
+		PreparedStatement thersholdsStatement		= null;
+		int agg_D040=0,agg_D170=0,T050=0,max_D040 = 0;
+		String T051=null,T052=null;
+		String displayColor=null;
+	
+		try {
+			
+	        if (_logger.isDebugEnabled()) { 
+				_logger.debug("updateFanucDisplayTable for email channel :: Parameters Passed ----, dashboardId["+dashboardId+"]" );
+			}
+	        derbyConnection=dbConnection;
+			try {
+				if (derbyConnection != null) {
+					try {
+						String selectFromRaw = "SELECT sum(D040) as agg_D040,sum(D170) as agg_D170,max(D040) as max_D040 FROM APP.QSTATS_RAW_DATA WHERE pkey IN ($P{queueList}) and channel=1 ";
+						//String selectFromRaw = "SELECT D040 as agg_D040,D170 as agg_D170 FROM APP.QSTATS_RAW_DATA WHERE pkey IN ($P{queueList}) ";
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("DashboardEmailProcessor:: in updateFanucDisplayTable dashboardId id passed : "
+									+ dashboardId);
+						}
+						String query = parseQuery(selectFromRaw);
+						selectStatement = derbyConnection.prepareStatement(query);
+
+						selectResultSet = selectStatement.executeQuery();
+
+						if (selectResultSet != null) {
+							while (selectResultSet.next()) {
+
+								agg_D040 = selectResultSet.getInt("agg_D040");
+								agg_D170 = selectResultSet.getInt("agg_D170");
+								max_D040 = selectResultSet.getInt("max_D040");
+
+							}
+							if (_logger.isDebugEnabled()) {
+								_logger.debug("DashboardEmailProcessor:: Aggregated data for email--> total contacts waiting "+agg_D040+"  total Emails handled "+agg_D170);
+							}
+						} else {
+							if (_errorLog) {
+								_logger.error("updateFanucTable :: ResultSet is Empty.");
+							}
+						}
+					} catch (Exception e) {
+						if (_errorLog) {
+							_logger.error(
+									"updateFanucTable ::  Error fetching aggregate data ",
+									e);
+						}
+					}
+					try{
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("DashboardEmailProcessor:: Thershold data passed "+therSholdBean+" for queueList "+queueList+" and for dashgroupId "+dashboardId);
+						}
+						
+						for (TherSholdBean therShold : therSholdBean){
+							
+							T050	=	 therShold.getTherSholdForContactsWaiting();
+							T051	=	therShold.getBelowTherSholdColorForContacts();
+							T052	=	therShold.getAboveThersholdColorForContacts();
+							if (max_D040 > T050) {
+								displayColor = T052;
+							} else {
+								displayColor = T051;
+							}
+						}
+					
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("EmailProcessor:: in updateFanucDisplayTable max[contacts waiting] "+max_D040+" [Thershold] set "+T050+" [Hexcode] for contacts waiting "+displayColor );
+						}
+					}catch(Exception e){
+						if (_errorLog) {
+							_logger.error("updateFanucTable ::  Error Processing For Thershold Coloring for DashboardEmailProcessor",
+									e);
+						}
+					}
+					
+					String insertAggregatedata = "UPDATE APP.qstats_fanuc_data SET A030=?,A080=?,A110=? WHERE dashboard_group_id=? ";
+					updateStatement = derbyConnection.prepareStatement(insertAggregatedata);
+					if (_debugLog) {
+						_logger.debug("updateFanucTable :: "
+								+ insertAggregatedata
+								+ ", With Aggregated Data");
+					}
+					updateStatement.setInt(1, agg_D040);
+					updateStatement.setInt(2, agg_D170);
+					updateStatement.setString(3, displayColor);
+					updateStatement.setInt(4, dashboardId);
+					updateStatement.executeUpdate();
+					if (_logger.isDebugEnabled()) {
+						_logger.debug("DashboardEmailProcessor :: fanuc display table updated "
+								+ "successfully with aggregated email data---> [total emails handled] "+agg_D170+"[total emails waiting] "+agg_D040+" for [dashgroup id] "+dashboardId );
+					}
+
+				} else {
+					if (_errorLog) {
+						_logger.error("updateFanucTable :: Error--> derby db connection null ");
+					}
+				}
+			}catch(Exception e){
+					if (_errorLog) {
+						_logger.error("updateFanucTable :: Error while Executing Query--- ", e);
+					}
+				}
+	      
+		}
+		 catch (Exception e) {
+				if (_errorLog) {
+					_logger.error("updateFanucTable ::  Error  "
+							+  " table.", e);
+				}
+			} finally {
+				/*if (derbyConnection != null) {
+					try {
+						MMConnectionPool.freeDerbyConnection(derbyConnection);
+					} catch (Exception ex) {
+						if (_errorLog) {
+							_logger.error("updateChannelTable :: Error while relasing derby dayabase connection ", ex);
+						}
+					}
+					//dbConnection = null;
+				}*/
+			}
+	}
+	private void updateFanucDisplayTable(int dashboardId,List<Integer> queueList,List<TherSholdBean> therSholdBean,Connection dbConnection) {
+		Connection derbyConnection = null;
+		PreparedStatement selectStatement = null, thersholdsStatement = null;
+		ResultSet selectResultSet = null, fetchThersholds = null;
+		PreparedStatement updateStatement = null;
+		int D040 = 0, D020 = 0, D030 = 0, D140 = 0, max_D040 = 0, T050 = 0, T040 = 0;
+		String D051 = null, T041 = null, T042 = null, T051 = null, T052 = null, displayColorForCalls = null, displayColorForDuration = null,longest_duration=null;
+		try {
+
+			if (_logger.isDebugEnabled()) {
+				_logger.debug("updateFanucDisplayTable:: Parameters Passed ----> dashboardId["
+						+ dashboardId + "]");
+			}
+			derbyConnection = dbConnection;
+			//FIXME DO NOT AGGREGATED FOR VOICE.... DIRECTLY UPDATE -- CONFIRMED WITH RAKESH
+			try {
+				if (derbyConnection != null) {
+					try {
+						
+						String selectFromRaw = "SELECT D020 as D020 ,D040 as D040,D030 as D030,D140 as D140,D051 as D051 FROM APP.QSTATS_RAW_DATA WHERE pkey IN ($P{queueList}) and channel=2 ";
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("VoiceProcessor:: in updateFanucDisplayTable dashboard id passed : "+ dashboardId);
+						}
+						String query = parseQuery(selectFromRaw);
+						selectStatement = derbyConnection.prepareStatement(query);
+						selectResultSet = selectStatement.executeQuery();
+						if (selectResultSet != null) {
+							while (selectResultSet.next()) {
+								D020 = selectResultSet.getInt("D020");
+								D030 = selectResultSet.getInt("D030");
+								D040 = selectResultSet.getInt("D040");
+								D051 = selectResultSet.getString("D051");
+								D140 = selectResultSet.getInt("D140");
+									//max_D040 = selectResultSet.getInt("max_D040");
+
+							}
+							if (_logger.isDebugEnabled()) {
+								_logger.debug("updateFanucTable:: selectfromRaw - "
+										+ selectFromRaw
+										+ ",Aggregated Data for DashboardVoice: "
+										+ "D020["
+										+ D020
+										+ "] "
+										+ "D030["
+										+ D030
+										+ "] "
+										+ "D140["
+										+D140
+										+ "] "
+										
+										+ "]"
+										+"D140["
+										+D140
+										+"]");
+										
+
+							}
+						} else {
+							if (_errorLog) {
+								_logger.error("updateFanucTable :: ResultSet is Empty-->Aggregated data for voice can not be fetched ");
+							}
+						}
+					} catch (Exception e) {
+						if (_errorLog) {
+							_logger.error("updateFanucTable ::  Error while processing Aggregated data for voice " , e);
+						}
+					}
+					if (_logger.isDebugEnabled()) {
+						_logger.debug("DashboardVoiceProcessor:: Thershold data passed "+therSholdBean+" for queueList "+queueList+" and for dashgroupId "+dashboardId);
+					}
+					
+					for (TherSholdBean therShold : therSholdBean){
+						T050	=	 therShold.getTherSholdForContactsWaiting();
+						T040	=	therShold.getTherSholdForLongestDuration();
+						T041	=	therShold.getBelowTherSholdColorForDuration();
+						T042	=	therShold.getAboveThersholdColorForDuration();
+						T051	=	therShold.getBelowTherSholdColorForContacts();
+						T052	=	therShold.getAboveThersholdColorForContacts();
+						if (D040 > T050) {
+							displayColorForCalls = T052;
+						} else {
+							displayColorForCalls = T051;
+						}
+					}
+					
+					try {
+
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("updateFanucTable:: displayColorForCalls--->"+displayColorForCalls);
+						}
+						int hour = 0;
+						int minutes = 0;
+						int seconds = 0;
+						String temp = null;
+						int time = 0;
+				
+						StringTokenizer timeTokens = new StringTokenizer(D051, ":");
+						int numberOfTokens = timeTokens.countTokens();
+						
+						int count = 0;
+						while (timeTokens.hasMoreElements()) {
+							count++;
+							temp = timeTokens.nextToken();
+							if (numberOfTokens == 3) {
+								if (count == 1) {
+									hour = Integer.parseInt(temp);
+									
+								} else if (count == 2) {
+									minutes = Integer.parseInt(temp);
+								} else if (count == 3) {
+									seconds = Integer.parseInt(temp);
+								}
+							} else if (numberOfTokens == 2) {
+								if (count == 1) {
+									minutes = Integer.parseInt(temp);
+								} else if (count == 2) {
+									seconds = Integer.parseInt(temp);
+								}
+							} else if (numberOfTokens == 1) {
+								if (count == 1) {
+									seconds = Integer.parseInt(temp);
+								}
+							}
+						}
+
+						if (hour != 0) {
+
+							time = time + hour * 60 * 60;
+						}
+						if (minutes != 0) {
+
+							time = time + minutes * 60;
+						}
+
+						if (seconds != 0) {
+
+							time = time + seconds;
+						}
+					
+						longest_duration=D051.substring(2);						
+					
+						  SimpleDateFormat sdf = new SimpleDateFormat("mm:ss");
+
+						    String strDate = sdf.format(time);
+						    System.out.println(strDate);
+						if (time > T040) {
+							displayColorForDuration = T042;
+						} else {
+							displayColorForDuration = T041;
+						}
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("updateFanucTable :: displayColorForDuration -->"+displayColorForDuration);
+						}
+					}catch(Exception e){
+						if (_errorLog) {
+							_logger.error("updateFanucTable ::  Error while processing for thershold colours " , e);
+						}
+					}
+					try {
+						//String insertAggregatedata = "UPDATE APP.qstats_fanuc_data SET A020=?,A090=?,A100=? WHERE dashboard_group_id=? ";
+						String insertAggregatedata = "UPDATE APP.qstats_fanuc_data SET A010 = ?,A040=?,A050=?,A060=?,A070=?,A020=?,A090=?,A100=? WHERE dashboard_group_id=? ";
+						updateStatement = derbyConnection
+								.prepareStatement(insertAggregatedata);
+						if (_debugLog) {
+							_logger.debug("updateFanucTable for voice :: "
+									+ insertAggregatedata
+									+ ", With Aggregated Data");
+						}
+						updateStatement.setInt(1, D040);
+						
+						updateStatement.setInt(2, D140);
+						updateStatement.setInt(3, D020);
+						updateStatement.setInt(4, D030);
+						updateStatement.setInt(5, D020 + D030);
+						updateStatement.setString(6, longest_duration);
+						
+						
+						updateStatement.setString(7, displayColorForCalls);
+						updateStatement.setString(8,displayColorForDuration);
+						updateStatement.setInt(9, dashboardId);
+						updateStatement.executeUpdate();
+						if (_logger.isDebugEnabled()) {
+							_logger.debug("updateFanucTable ::fanuc_data table updated successfully with voice aggregated data ");
+						}
+					}catch(Exception e){
+						if (_errorLog) {
+							_logger.error("updateFanucTable ::  Error while updating qstats_fanuc_data " , e);
+						}
+					}
+
+				} else {
+					if (_errorLog) {
+						_logger.error("updateFanucTable :: Error fetching db connection ");
+					}
+				}
+			} catch (Exception e) {
+				if (_errorLog) {
+					_logger.error(
+							"updateFanucTable :: Error while processing for dashboard voice--- ",
+							e);
+				}
+			}
+		} catch (Exception e) {
+			if (_errorLog) {
+				_logger.error("updateFanucTable ::  Error  " , e);
+			}
+		} finally {
+
+			if (selectStatement != null) {
+				try {
+					selectStatement.close();
+				} catch (Exception ex) {
+					if (_errorLog) {
+						_logger.error(
+								"updateFanucTable ::  Error " + " table.", ex);
+					}
+				}
+				selectStatement = null;
+			}
+
+		}
+	}
+					
+	
+	public StringBuilder getqueueList(List<Integer> queueList) {
+		Iterator<Integer> it = queueList.iterator();
+		StringBuilder sb = new StringBuilder();
+		while (it.hasNext()) {
+			sb.append(it.next()).append(",");
+		}
+		sb.deleteCharAt(sb.length() - 1);
+		if (_logger.isDebugEnabled()) {
+			_logger.debug("getQueueList--> "+sb);
+		}
+		return sb;
+	}
+
+	private String parseQuery(String selectFromRaw) {
+
+		try {
+			String re1 = "(\\$)"; // Any Single Character 1
+			String re2 = "(P)"; // Variable Name 1
+			String re3 = "(\\{)"; // Any Single Character 2
+			String re4 = "(queueList)";
+			String re5 = "(\\})"; // Any Single Character 3
+			String regex = null;
+
+			Pattern p = Pattern.compile(re1 + re2 + re3 + re4 + re5,
+					Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+			Matcher m = p.matcher(selectFromRaw);
+
+			while (m.find()) {
+				String c1 = m.group(1);
+				String var1 = m.group(2);
+				String c2 = m.group(3);
+				String alphanum = m.group(4);
+				String c3 = m.group(5);
+				regex = c1.toString() + var1.toString() + c2.toString()
+						+ alphanum.toString() + c3.toString();
+			}
+			selectFromRaw = selectFromRaw.replace(regex,getqueueList(queueList));
+			if (_logger.isDebugEnabled()) {
+				_logger.debug("parseQuery:: query is " + selectFromRaw);
+			}
+
+		} catch (Exception e) {
+			if (_logger.isErrorEnabled()) {
+				_logger.error("parseQuery:: Exception ", e);
+			}
+		} finally {
+			if (_logger.isDebugEnabled()) {
+				_logger.debug("parseQuery:: Finally of queryAnalyser--"
+						+ selectFromRaw);
+			}
+		}
+
+		return selectFromRaw;
+
+	}
+}

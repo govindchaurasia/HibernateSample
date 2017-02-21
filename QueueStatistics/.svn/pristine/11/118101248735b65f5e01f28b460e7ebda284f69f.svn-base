@@ -1,0 +1,32 @@
+CREATE TABLE APP.QueueStats(
+QS_Id INTEGER,
+QS_Channel INTEGER,
+QS_QueueName VARCHAR(100),
+QS_Status INTEGER,
+QS_TenantgroupID INTEGER,
+QS_LastUpdateTime TIMESTAMP,
+QS_QueueGroupId INTEGER,
+QS_isMonitored BOOLEAN,
+QS_data0 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data1 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data2 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data3 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data4 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data5 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data6 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data7 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data8 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+QS_data9 VARCHAR(100) NOT NULL DEFAULT 'Unknown',
+CONSTRAINT QS_primary_key PRIMARY KEY (QS_Id)
+);
+
+
+drop table APP.QueueStats;
+
+select * from APP.QueueStats;
+
+select * from APP.QueueStats where qs_id in (1);
+
+timestamp('2010-12-31 23:59:59')
+
+insert into APP.QUEUESTATS values(3,1,'Queue3',1,16,timestamp('2010-04-29 12:35:33'),'D0','D1','D2','D3','D4','D5','D6','D7','D8','D9');

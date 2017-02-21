@@ -1,0 +1,7 @@
+#This file conains the location information for various directories
+
+LOGS=	D:\\vishakha\\Eclipse Workspace kepler\\QueueStats\\QStats Tomcat\\LOGS
+HOME=	D:\\vishakha\\Eclipse Workspace kepler\\QueueStats\\QStats Tomcat\\QS_HOME
+LICENSE=D:\\vishakha\\Eclipse Workspace kepler\\QueueStats\\QStats Tomcat\\QS_HOME
+LIB=	D:\\vishakha\\Eclipse Workspace kepler\\QueueStats\\QStats Tomcat\\QS_HOME\\lib
+

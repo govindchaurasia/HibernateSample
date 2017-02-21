@@ -1,0 +1,538 @@
+package com.interactcrm.qstats.threads;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.Properties;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.interactcrm.logging.Log;
+import com.interactcrm.logging.factory.LogModuleFactory;
+import com.interactcrm.qstats.dao.QueueStatsDAO;
+import com.interactcrm.qstats.db.MMConnectionPool;
+import com.interactcrm.qstats.startup.TenantGroupObj;
+import com.interactcrm.qstats.startup.TenantGroupStore;
+import com.interactcrm.util.logging.LogHelper;
+import com.interactcrm.utils.Utility;
+/**
+ * This is a non voice processor thread .
+ * The threads processes data in raw table (for e.g processing waiting duration) and updates in display table
+ * 
+ *
+ */
+public class NVProcessor implements Runnable{
+
+	int processor_Sleeptime;
+	int queueGroup;
+	int channelId;
+	int tenantGroupId;
+	
+	boolean _debugLog 		= false;
+    boolean _errorLog 		= false;
+    boolean _infoLog 		= false;
+    Log _logger 			= null;
+	private static boolean isRunning	=	true;
+	TenantGroupObj tenantGrpObj;
+	public NVProcessor(int queueGroup,int processor_Sleeptime,int channelId,int tenantGroupId,TenantGroupObj tenantGrpObj){
+		
+		this.processor_Sleeptime= processor_Sleeptime;
+		this.queueGroup			= queueGroup;
+		this.channelId			= channelId;
+		this.tenantGroupId		= tenantGroupId;
+		this.tenantGrpObj	=	tenantGrpObj;
+		_logger 				= new LogHelper(NVProcessor.class).getLogger(LogModuleFactory.getModule("Processor"), String.valueOf(queueGroup)+"_"+String.valueOf(channelId));		
+	        
+        if (_logger != null) {
+            _debugLog = _logger.isDebugEnabled();
+            _errorLog = _logger.isErrorEnabled();
+            _infoLog = _logger.isInfoEnabled();
+        }
+        if (_logger.isDebugEnabled()) {
+			_logger.debug("NVProcessor:: SleepTime---->"+processor_Sleeptime);
+		}
+	}
+	
+	@Override
+	public void run() {
+		
+		while(tenantGrpObj.isRunning()){			
+			updateDisplayTable(queueGroup);
+			updateAggregateTable(channelId,tenantGroupId);
+			
+			try {
+				Thread.sleep(processor_Sleeptime * 1000);
+			} catch (InterruptedException ie) {
+				if (_errorLog) {
+					_logger.error("Processor :: "
+							+  " ", ie);
+				}
+			}
+		}
+		
+		
+		
+	}
+
+	
+	/**
+	 * Calculates aggregated data channel wise in particular tenantGroup and updates in qstats_channel_data table
+	 * for e.g total contacts waiting , longest contact waiting duration etc
+	 * @param channelId
+	 * @param tgId
+	 */
+	
+	private void updateAggregateTable(int channelId, int tgId) {
+		Connection dbConnection			 		= null;
+		PreparedStatement selectStatement		= null;
+		ResultSet selectResultSet				= null;
+		PreparedStatement updateStatement		= null;
+		int agg_D020 = 0,agg_D030=0,agg_D040=0,agg_D060=0,agg_D070=0,agg_D090=0,agg_D100=0,agg_D110=0,agg_D130=0;
+		String agg_D051=null;
+		try {
+			
+	        if (_logger.isDebugEnabled()) { 
+				_logger.debug("updateChannelTable:: Parameters Passed ----channelId["+channelId+"], tgId["+tgId+"]" );
+			}
+	        dbConnection=MMConnectionPool.getDerbyConnection();
+	        try{
+	        	if(dbConnection!=null){
+	        		//String selectFromRaw="SELECT "+count1+"= sum(D041) FROM APP.QSTATS_RAW_DATA WHERE channel = ? AND tenantgroup_pkey = ? ";
+	        		
+	        		String selectFromRaw="SELECT sum(D020) as agg_D010 ,sum(D040) as agg_D040,sum(D030) as agg_D030,sum(D060) as agg_D060,sum(D070) as agg_D070,sum(D090) as agg_D090,sum(D100) as agg_D100,sum(D130) as agg_D130,max(D051) as agg_D051 FROM APP.QSTATS_RAW_DATA WHERE channel = ? AND tenantgroup_pkey = ? ";
+	        		 if (_logger.isDebugEnabled()) { 
+	        				_logger.debug("VoiceProcessor:: in updateChannelTable channelId and tenant group id passed : "+channelId+" "+tgId );
+	        			}
+	        		selectStatement=dbConnection.prepareStatement(selectFromRaw);
+	        		selectStatement.setInt(1, channelId);
+					selectStatement.setInt(2, tgId);
+					selectResultSet 		= selectStatement.executeQuery();
+					if(selectResultSet!=null){
+						while(selectResultSet.next()){	
+							agg_D020=selectResultSet.getInt("agg_D010");
+							
+							agg_D030=selectResultSet.getInt("agg_D030");
+							agg_D040=selectResultSet.getInt("agg_D040");
+							agg_D060=selectResultSet.getInt("agg_D060");
+							agg_D070=selectResultSet.getInt("agg_D070");
+							agg_D090=selectResultSet.getInt("agg_D090");
+							agg_D100=selectResultSet.getInt("agg_D100");
+							agg_D130=selectResultSet.getInt("agg_D130");
+							agg_D051=selectResultSet.getString("agg_D051");
+						
+						}
+						if (_logger.isDebugEnabled()) { 
+							_logger.debug("updateChannelTable:: selectfromRaw - "+selectFromRaw+",Aggregated Data: " +
+									"agg_D020["+agg_D020+"] " +											
+									"agg_D030["+agg_D030+"] " +
+									"agg_D040["+agg_D040+"] " +
+									"agg_D060["+agg_D060+"] " +
+									"agg_D070["+agg_D070+"]" +
+									"agg_D090["+agg_D090+"] "+
+									"agg_D130["+agg_D130+"] " +
+									"agg_D051["+agg_D051+"]");
+						}
+					}
+					else{
+						if (_errorLog) {
+							_logger.error("updateChannelTable :: ResultSet is Empty.");
+						}
+					}
+					
+					
+					String insertAggregatedata = "UPDATE APP.qstats_channel_data SET A010 = ?,A020=?,A030=?,A050=?,A060=?,A070=?,A080=?,A090=?,A100=? WHERE channel_pkey = ? AND tenantgroup_pkey = ? ";
+					updateStatement 		 = dbConnection.prepareStatement(insertAggregatedata);
+					if(_debugLog){
+						_logger.debug("updateChannelTable :: "+insertAggregatedata+", With Aggregated Data");
+					}
+					updateStatement.setInt(1,agg_D040 );
+					updateStatement.setInt(2, agg_D020);
+					updateStatement.setInt(3, agg_D030);
+					//updateStatement.setInt(4, agg_D040);
+					updateStatement.setInt(4, agg_D060);
+					updateStatement.setInt(5, agg_D070);
+					updateStatement.setInt(6, agg_D090);
+					updateStatement.setInt(7, agg_D100);
+					updateStatement.setString(8, agg_D051);
+					updateStatement.setInt(9, agg_D130);
+				
+					updateStatement.setInt(10, channelId);
+					updateStatement.setInt(11, tgId);
+					updateStatement.executeUpdate();
+					
+				}
+	        	else {
+					if (_errorLog) {
+						_logger.error("updateChannelTable :: Error fetching db connection ");
+					}
+				}
+	        }catch(Exception e){
+					if (_errorLog) {
+						_logger.error("updateChannelTable :: Error in Executing Query--- ", e);
+					}
+				}
+	      
+	        }
+		 catch (Exception e) {
+				if (_errorLog) {
+					_logger.error("updateChannelTable ::  Error  "
+							+  " table.", e);
+				}
+			} finally {
+
+				if (selectStatement != null) {
+					try {
+						selectStatement.close();
+					} catch (Exception ex) {
+						if (_errorLog) {
+							_logger.error("updateChannelTable ::  Error "
+									+  " table.", ex);
+						}
+					}
+					selectStatement = null;
+				}
+				
+				if (dbConnection != null) {
+					try {
+						MMConnectionPool.freeDerbyConnection(dbConnection);
+					} catch (Exception ex) {
+						if (_errorLog) {
+							_logger.error("updateChannelTable :: Error relasing derby connection", ex);
+						}
+					}
+					//dbConnection = null;
+				}
+			}
+	}
+	/*
+	 * This method reads quries from properties file ProcessorQueries.properties
+	 * Processes raw data and updates data in derby table
+	 * 
+	 */
+	private void updateDisplayTable(int queueGroup) {
+		
+		Connection dbConnection 			= null;
+		//Connection dbConnectionderby		= null;
+		PreparedStatement statement 		= null;
+		ResultSet rs						= null;
+		ResultSetMetaData rsmd				= null;
+		Properties push					 	= new Properties();
+		InputStream in					 	= null;
+		TreeMap<String,String> queryList	= new TreeMap<String,String>();
+		ArrayList<String> insertQueryList	= new ArrayList<String>();
+		
+		try {
+			
+			in = new FileInputStream(Utility.getAppHome() + File.separator + "ProcessorQueries.properties");			
+			push.load(in);				       
+
+	        queryList.put("query", push.getProperty("query"));
+
+	        if (_logger.isDebugEnabled()) {
+				_logger.debug("updateDisplayTable:: queryList After Sort----"+queryList);
+			}
+	        
+	        dbConnection = MMConnectionPool.getDerbyConnection();
+	        
+	        for(String qKey:queryList.keySet()){	         
+			
+	        	if (_logger.isDebugEnabled()) {
+					_logger.debug("updateDisplayTable:: Query obtained fron the qKey----"+ qKey +"Query ---"+queryList.get(qKey));
+				}
+				if (dbConnection != null) {					
+					statement = dbConnection.prepareStatement(queryList.get(qKey));
+					statement.setInt(1, queueGroup);
+					rs		  = statement.executeQuery();
+					
+					if(rs != null){						
+						rsmd	  			= rs.getMetaData();
+												
+						while(rs.next()){		
+							String columnName	=  "";
+							String columnValue	=  "";
+							
+							for (int i = 1; i <= rsmd.getColumnCount(); i++) {																
+								
+								if("PKEY".equals(rsmd.getColumnName(i))){
+									continue;
+								}
+								if(rsmd.getColumnType(i) == Types.VARCHAR){
+									
+									if("D051".equals(rsmd.getColumnName(i))){
+										if(rs.getString(rsmd.getColumnName(i)).length()<=4){
+											
+											columnValue	= "'0"+rs.getString(rsmd.getColumnName(i))+"'";
+											
+										}else{
+											columnValue	= "'"+rs.getString(rsmd.getColumnName(i))+"'";
+											
+										}
+										
+									}else{
+									columnValue	= "'"+rs.getString(rsmd.getColumnName(i))+"'";
+									}
+									/*if (_logger.isDebugEnabled()) {
+										_logger.debug("generateQueueStatsSeed:: rsmd.getColumnType(i) == Types.VARCHAR----"+ rsmd.getColumnType(i) );
+									}*/
+								}else if(rsmd.getColumnType(i) == Types.INTEGER){
+									try{
+										Integer.parseInt(rs.getString(rsmd.getColumnName(i)));
+										columnValue	= rs.getString(rsmd.getColumnName(i));
+										/*if (_logger.isDebugEnabled()) {
+											_logger.debug("generateQueueStatsSeed:: rsmd.getColumnType(i) == Types.INTEGER(try)----"+ rsmd.getColumnType(i) );
+										}*/
+									}catch(Exception e){
+										columnValue	= "0";
+										if (_logger.isDebugEnabled()) {
+											_logger.debug("generateQueueStatsSeed:: rsmd.getColumnType(i) == Types.INTEGER(catch)----"+ rsmd.getColumnType(i) );
+										}
+									}
+								}else if(rsmd.getColumnType(i) == Types.TIMESTAMP){
+									columnValue	= "'"+rs.getString(rsmd.getColumnName(i))+"'";
+									/*if (_logger.isDebugEnabled()) {
+										_logger.debug("generateQueueStatsSeed:: rsmd.getColumnType(i) == Types.TIMESTAMP----"+ rsmd.getColumnType(i) );
+									}*/
+								}else if(rsmd.getColumnType(i) == Types.TINYINT){
+									try{
+										Integer.parseInt(rs.getString(rsmd.getColumnName(i)));
+										columnValue	= rs.getString(rsmd.getColumnName(i));
+										/*if (_logger.isDebugEnabled()) {
+											_logger.debug("generateQueueStatsSeed:: rsmd.getColumnType(i) == Types.TINYINT(try)----"+ rsmd.getColumnType(i) );
+										}*/
+									}catch(Exception e){
+										columnValue	= "0";
+										if (_logger.isDebugEnabled()) {
+											_logger.debug("generateQueueStatsSeed:: rsmd.getColumnType(i) == Types.TINYINT(catch)----"+ rsmd.getColumnType(i) );
+										}
+									}
+								}else{
+									columnValue	= rs.getString(rsmd.getColumnName(i));
+								}  
+												
+								
+								
+							
+								
+								columnName		+= rsmd.getColumnName(i)+"="+columnValue+",";
+							}
+							columnName 		= columnName.substring(0,columnName.length()-1);
+							columnValue	= columnValue.substring(0,columnValue.length()-1);
+							
+							
+							String finalString = "UPDATE APP.QSTATS_DISPLAY_DATA SET "+columnName +" WHERE PKEY="+ rs.getString("PKEY");
+							if (_logger.isDebugEnabled()) {
+								_logger.debug("updateDisplayTable:: rsmd.getColumnType(i) == Types.TINYINT(catch)----"+ finalString );
+							}
+							insertQueryList.add(finalString);
+						}												
+					}else{
+
+				        if (_logger.isDebugEnabled()) {
+							_logger.debug("updateDisplayTable:: ResultSet is Null");
+						}
+					}
+					
+				}else {
+					if (_errorLog) {
+						_logger.error("updateDisplayTable :: Error fetching db connection ");
+					}
+				}
+	        }
+	        
+	        if (_logger.isDebugEnabled()) {
+				_logger.debug("updateDisplayTable:: insertQueryList===["+insertQueryList+"]");
+			}
+	        
+	       
+	        	
+	        	 for(String query:insertQueryList){
+	        		 try{
+		 	        	if (dbConnection != null) {					
+		 					statement = dbConnection.prepareStatement(query);
+		 					statement.executeUpdate();				
+		 					
+		 				}else {
+		 					if (_errorLog) {
+		 						_logger.error("updateDisplayTable :: Error fetching db connection in cleaning "
+		 								+   " table");
+		 					}
+		 				}
+	        		 }catch(Exception e){
+	     	        	if (_errorLog) {
+	     					_logger.error("updateDisplayTable :: Exception in Insertion query--["+query+"]", e);
+	     				}
+	     	        }	
+	 	        }
+	               	       	        
+	        
+		} catch (Exception e) {
+			if (_errorLog) {
+				_logger.error("updateDisplayTable :: E Error in cleaning "
+						+  " table.", e);
+			}
+		} finally {
+
+			if (statement != null) {
+				try {
+					statement.close();
+				} catch (Exception ex) {
+					if (_errorLog) {
+						_logger.error("updateDisplayTable ::  Error in cleaning "
+								+  " table.", ex);
+					}
+				}
+				statement = null;
+			}
+			if (dbConnection != null) {
+				try {
+					MMConnectionPool.freeDerbyConnection(dbConnection);					
+				} catch (Exception ex) {
+					if (_errorLog) {
+						_logger.error("updateDisplayTable :: Error while relasing derby connection", ex);
+					}
+				}
+				dbConnection = null;
+			}
+
+		}
+	}
+	
+	/**
+	 * not in used currently
+	 * @param queueGroup
+	 */
+	private void updateDisplayTable_old(int queueGroup) {
+
+		
+		Connection dbConnection			 		= null;
+		PreparedStatement selectStatement		= null;
+		ResultSet selectResultSet				= null;
+		PreparedStatement updateStatement		= null;
+		
+		try {
+			
+	        if (_logger.isDebugEnabled()) { 
+				_logger.debug("updateDisplayTable:: Parameters Passed ----queueGroup["+queueGroup+"]" );
+			}
+	        
+	        dbConnection = MMConnectionPool.getDerbyConnection();
+	        
+				try{
+					if (dbConnection != null) {			
+						String selectfromRaw	= "select PKEY AS PKEY,ID AS ID,CHANNEL AS CHANNEL,PRIORITY AS PRIORITY,TENANT_PKEY AS TENANT_PKEY,TENANTGROUP_PKEY AS TENANTGROUP_PKEY,LU010 AS LU010,LU040 AS LU040,D000 AS D000,D010 AS D010,D020 AS D020,D030 AS D030,D040 AS D040,D050 AS D050,D060 AS D060,D070 AS D070,D080 AS D080,D090 AS D090,T040 AS T040,T041 AS T041,T042 AS T042 from APP.QSTATS_RAW_DATA WHERE QUEUEGROUP_PKEY=? AND IS_ACTIVE=1";
+						selectStatement 		= dbConnection.prepareStatement(selectfromRaw);						
+						selectStatement.setInt(1, queueGroup);						
+						selectResultSet 		= selectStatement.executeQuery();	
+						
+						if(selectResultSet!=null){
+							while(selectResultSet.next()){
+								if (_logger.isDebugEnabled()) { 
+									_logger.debug("updateDisplayTable:: Parameters Passed ----PKEY["+selectResultSet.getInt("PKEY")+"] " +
+											"D000["+selectResultSet.getString("D000")+"] " +
+											"D010["+selectResultSet.getString("D010")+"] " +
+											"D020["+selectResultSet.getString("D020")+"] " +
+											"D030["+selectResultSet.getString("D030")+"] " +
+											"D040["+selectResultSet.getString("D040")+"] " +
+											"D050["+selectResultSet.getString("D050")+"] " +
+											"D060["+selectResultSet.getString("D060")+"] " +
+											"D070["+selectResultSet.getString("D070")+"] " +
+											"D080["+selectResultSet.getString("D080")+"]" );
+								}
+								
+								//String insertDisplaydata = "UPDATE APP.QSTATS_DISPLAY_DATA SET D000=?,D010=?,D020=?,D030=?,D040=?,D050=?,D060=?,D070=?,D080=?,D090=? WHERE PKEY=?";
+								String insertDisplaydata = "UPDATE APP.QSTATS_DISPLAY_DATA SET D010=?,D090=? WHERE PKEY=?";
+								updateStatement 		 = dbConnection.prepareStatement(insertDisplaydata);
+								
+								updateStatement.setString(1, selectResultSet.getString("D000")+"-("+selectResultSet.getInt("D040")+") "+selectResultSet.getString("D050"));
+								updateStatement.setString(2, "red");
+								//updateStatement.setInt(2, 	 selectResultSet.getInt("D090"));
+								updateStatement.setInt(3, 	 selectResultSet.getInt("PKEY"));
+								/*updateStatement.setString(1, selectResultSet.getString("D000"));
+								updateStatement.setInt(2, 	 selectResultSet.getInt("D010"));
+								updateStatement.setInt(3, 	 selectResultSet.getInt("D020"));
+								updateStatement.setInt(4, 	 selectResultSet.getInt("D030"));
+								updateStatement.setInt(5, 	 selectResultSet.getInt("D040"));
+								updateStatement.setString(6, selectResultSet.getString("D050"));
+								updateStatement.setInt(7, 	 selectResultSet.getInt("D060"));
+								updateStatement.setInt(8, 	 selectResultSet.getInt("D070"));
+								updateStatement.setString(9, selectResultSet.getString("D080"));
+								updateStatement.setString(10,selectResultSet.getString("D090"));
+								updateStatement.setInt(11, 	 selectResultSet.getInt("PKEY"));*/
+								
+								updateStatement.executeUpdate();
+							}
+						}else{
+							if (_errorLog) {
+								_logger.error("updateDisplayTable :: ResultSet is Empty.");
+							}
+						}
+					}else {
+						if (_errorLog) {
+							_logger.error("updateDisplayTable :: Error fetching db connection ");
+						}
+					}
+				}catch(Exception e){
+					if (_errorLog) {
+						_logger.error("updateDisplayTable :: Error in Executing Query--- ", e);
+					}
+				}
+				
+				        
+			if (_logger.isDebugEnabled()) {
+				_logger.debug("updateDisplayTable:: Query Executed Successfully.");
+			}
+		} catch (Exception e) {
+			if (_errorLog) {
+				_logger.error("updateDisplayTable ::  Error  "
+						+  " table.", e);
+			}
+		} finally {
+
+			if (selectStatement != null) {
+				try {
+					selectStatement.close();
+				} catch (Exception ex) {
+					if (_errorLog) {
+						_logger.error("updateDisplayTable ::  Error "
+								+  " table.", ex);
+					}
+				}
+				selectStatement = null;
+			}
+			
+			if (dbConnection != null) {
+				try {
+					MMConnectionPool.freeDerbyConnection(dbConnection);
+				} catch (Exception ex) {
+					if (_errorLog) {
+						_logger.error("updateDisplayTable :: Error"
+								+  " table.", ex);
+					}
+				}
+				dbConnection = null;
+			}
+		}
+	
+	
+		
+	}
+	
+	/*public static void stopThread(){
+		isRunning = false;
+	}
+	
+	public static void startThread(){
+		isRunning = true;
+	}
+	*/
+
+}

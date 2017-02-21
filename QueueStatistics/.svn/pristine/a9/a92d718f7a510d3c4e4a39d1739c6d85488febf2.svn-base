@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:javaee="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd" id="WebApp_ID" version="2.4">
+<listener>
+    <listener-class>com.interactcrm.qstats.startup.StartupListener</listener-class>
+  </listener>
+  <servlet>
+    <servlet-name>StartupListener</servlet-name>
+    <servlet-class>com.interactcrm.qstats.startup.StartupListener</servlet-class>
+  </servlet>
+  
+  <servlet>
+    <display-name>GetData</display-name>
+    <servlet-name>GetData</servlet-name>
+    <servlet-class>com.interactcrm.qstats.servlets.GetData</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>GetData</servlet-name>
+    <url-pattern>/GetData</url-pattern>
+  </servlet-mapping>
+  
+    <servlet>
+    <display-name>GetFanucData</display-name>
+    <servlet-name>GetFanucData</servlet-name>
+    <servlet-class>com.interactcrm.qstats.servlets.GetFanucData</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>GetFanucData</servlet-name>
+    <url-pattern>/GetFanucData</url-pattern>
+  </servlet-mapping>
+  
+    <servlet>
+    <display-name>ViewTable</display-name>
+    <servlet-name>ViewTable</servlet-name>
+    <servlet-class>com.interactcrm.qstats.viewderby.ViewTable</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ViewTable</servlet-name>
+    <url-pattern>/ViewTable</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+  	<display-name>RefreshQStats</display-name>
+  	<servlet-name>RefreshQStats</servlet-name>
+  	<servlet-class>com.interactcrm.qstats.refresh.RefreshQStats</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+  <servlet-name>RefreshQStats</servlet-name>
+  <url-pattern>/RefreshQStats</url-pattern>
+  
+  </servlet-mapping>
+  
+  
+  
+</web-app>

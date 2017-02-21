@@ -1,0 +1,138 @@
+package com.interactcrm.qstats.threads;
+
+
+
+//import com.interactcrm.qstats.startup;
+import com.interactcrm.logging.Log;
+import com.interactcrm.logging.factory.LogModuleFactory;
+import com.interactcrm.mm.constants.Constants;
+
+import com.interactcrm.qstats.qm.QueueManager;
+import com.interactcrm.qstats.qm.QueueManagerMap;
+import com.interactcrm.qstats.startup.AgentMonitorStore;
+import com.interactcrm.qstats.startup.QMTenantGroupStore;
+import com.interactcrm.util.logging.LogHelper;
+
+public class AgentstatsUpdater implements Runnable{
+
+	int fetcher_Sleeptime;
+	String tenantGrpName;
+	int tenantGroupID;
+	boolean _debugLog 		= false;
+    boolean _errorLog 		= false;
+    boolean _infoLog 		= false;
+    Log _logger 			= null;
+	
+	public AgentstatsUpdater(int tenantGroupID,int fetcher_Sleeptime,String tenantGrpName){
+		
+		this.fetcher_Sleeptime	= fetcher_Sleeptime;
+		this.tenantGrpName	=	tenantGrpName;
+		this.tenantGroupID		= tenantGroupID;
+		_logger 				= new LogHelper(AgentstatsUpdater.class).getLogger(LogModuleFactory.getModule("AgentstatsUpdater"), String.valueOf(tenantGroupID));		
+	        
+        if (_logger != null) {
+            _debugLog = _logger.isDebugEnabled();
+            _errorLog = _logger.isErrorEnabled();
+            _infoLog = _logger.isInfoEnabled();
+        }
+	}
+	
+	@Override
+	public void run() {
+			
+		while(true){
+			if (_debugLog) {
+				_logger.debug("getAgentDetailsFromQM:: fetching QM details for tenantGroup--"+tenantGroupID);
+			}
+			try{
+				int qmKey = QMTenantGroupStore.getInstance().getQMPkey(tenantGroupID);
+				if (_infoLog) {
+					_logger.info("getAgentDetailsFromQM:: Queue Mgr pkey for tenant group [" + tenantGroupID + "] is " + qmKey);
+				}
+				QueueManager qmObj 	= QueueManagerMap.getInstance().getQueueManager(qmKey);
+				StringBuilder sb 	= new StringBuilder();
+				sb.append(Constants.TENANT_GRP_ID).append("=").append(tenantGroupID).append("&").append(Constants.TENANT_GRP_NAME).append("=").append(tenantGrpName);
+		
+				if (_infoLog) {
+					_logger.info("getAgentDetailsFromQM::Sending request to QM tenant group = " + tenantGroupID);
+				}
+		
+				String result = qmObj.getAgentMonitorDetails(Constants.GET_AGENT_MONITOR_SERVLET, sb ,tenantGroupID+"");
+				if (_infoLog) {
+					_logger.info("getAgentDetailsFromQM:: Result from name for QM = " + result + " for tenant group = " + tenantGroupID);
+				}
+				
+				AgentMonitorStore.getInstance().addAgentMonitoreData(tenantGroupID, result);
+				
+				// Made changes in servletTogetAgent details
+	/*			JSONObject agentData = new JSONObject(result);
+				
+				if (_infoLog) {
+					_logger.info("getAgentDetailsFromQM:: Json Parsed length [" + agentData.length()+"] ");
+				}
+								
+				JSONArray agentStatsArray		=	agentData.getJSONArray("agentStatistics"); 
+				
+				if (_infoLog) {
+					_logger.info("getAgentDetailsFromQM:: Json Parsed length [" + agentStatsArray+"] ");
+				}
+				
+				JSONObject agentObj	 =	agentStatsArray.getJSONObject(0);				
+				JSONArray agentArray = agentObj.getJSONArray("agents"); 
+				
+				int staffedAgents	 =	agentArray.length();
+				int auxAgents		 =	0;
+				int availableAgents	 =	0;
+				int idleAgents		 =	0;
+				
+				for(int i=0;i<agentArray.length();i++){
+					 					
+					JSONObject agent 	= agentArray.getJSONObject(i);
+					if (_infoLog) {
+						_logger.info("getAgentDetailsFromQM:: agent [" + agent+"] ");
+					}
+					String agentState	= agent.getString("state");	
+					
+					if("Working".equals(agentState)){
+						availableAgents++;
+					}else if("On Break".equals(agentState)){
+						auxAgents++;
+					}else{
+						idleAgents++;
+					}
+					
+					
+				}*/
+				
+			
+				
+							
+				Thread.sleep(fetcher_Sleeptime * 1000);
+				
+			} catch (InterruptedException e) {
+				if (_errorLog) {
+					_logger.error("QueueStatsUpdater ::InterruptedException "
+							+  " ", e);
+				}
+				
+				try {
+					Thread.sleep(fetcher_Sleeptime * 1000);
+				} catch (InterruptedException ie) {
+					if (_errorLog) {
+						_logger.error("QueueStatsUpdater :: "
+								+  " ", ie);
+					}
+				}
+			}catch(Exception e){
+				if (_errorLog) {
+					_logger.error("QueueStatsUpdater ::Exception "
+							+  " ", e);
+				}
+			}
+		}
+		
+	}
+	
+
+	
+}

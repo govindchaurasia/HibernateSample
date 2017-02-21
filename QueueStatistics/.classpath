@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
+		<attributes>
+			<attribute name="owner.project.facets" value="java"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
+	<classpathentry kind="lib" path="D:/MyProject/CampaignDashboard/CampaignDashboard/WebContent/WEB-INF/lib/jackson-all-1.9.0.jar"/>
+	<classpathentry kind="lib" path="D:/MyProject/CampaignDashboard/CampaignDashboard/WebContent/WEB-INF/lib/jdbc-helper-0.3.1.jar"/>
+	<classpathentry kind="lib" path="D:/MyProject/CampaignDashboard/CampaignDashboard/WebContent/WEB-INF/lib/jpa.jar"/>
+	<classpathentry kind="lib" path="D:/MyProject/CampaignDashboard/CampaignDashboard/WebContent/WEB-INF/lib/jstl-1.2.jar"/>
+	<classpathentry kind="lib" path="D:/QueueStats/Builds/derbyfunction.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/commons-codec-1.10.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/commons-dbcp-1.4.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/commons-discovery-0.2.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/commons-pool-1.5.6.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/derby.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/derbyfunction_v4.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/derbynet.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/derbytools.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/gson-2.0.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm_alarm_gen-1.0-bl_0_4.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-common-crypt-20080922-1245.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-common-locationreader-2.5.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-common-propertyreader-2.3.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-common-utility-3.1.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-dbcp-3.0-bl_14.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-logging-utility-1.15.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icrm-resource-reader-1.1-bl_1.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/icx-crypto-utility-0.0.6.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/jackson-all-1.9.0.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/jdbc-helper-0.3.1.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/jpa.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/jstl-1.2.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/LM_verifier_v1.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/mail.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/mmcommons2.3.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/mysql-connector-java-5.1.14-bin.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/servlet-api.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/spring-crypto-utils-1.4.0.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/spring-security-crypto-4.2.1.RELEASE.jar"/>
+	<classpathentry kind="lib" path="D:/GIT/QueueStatistics/WebContent/WEB-INF/lib/sqljdbc4.jar"/>
+	<classpathentry kind="output" path="build/classes"/>
+</classpath>

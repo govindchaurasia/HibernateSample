@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>QueueStats</title>
+</head>
+<body>
+<br>Date: May 27, 2016 
+<br>Time : 05:00 PM
+<br>Developer : Govind Chaurasia
+<br>Build Version : 20160527-QueueStats_109_07
+<br>1.Removed unused code, unused imports,code commenting
+<br>2.Queue Monitor data will come from QueueStats derby
+<br>3.Changes to process aggregate data for Multimedia Channel (My Queues) 
+<br>4.Added CampaignStats data in derby table
+<br>5.Dependency AD v3.66.5 and RM v7.13
+<br>Installation Notes : #8381
+
+<br>Date : July 28 , 2015
+<br>Time : 05:15 PM
+<br>Developer : Vishakha Kadam
+<br>Build No : 20150605-QueueStats_109_06
+<br>1.Changes for SIP voice processor . 
+<br>2.Changed query getAgentCLIDetailsWithFullName in Queries.properties to return calls at agents from agent_CLI table 
+<br>3.Made changes in voice processor , to move processed data like waiting contacts ,duration ,staffed agents, aux agents etc in case of SIP voice processor
+<br>4.Made changes to process aggregate data differenty for avaya voice and SIP voice
+<br>5.Changes in refreshQstats servlet , sending sucess/failure json response from servlet as it is mandatory for CCM response.
+<br>6.Enable or disable fanuc dashboard thread . Reading property from FanucDashboard.properties file. 
+<br>Installation notes : 
+<br>Release notes :
+<br> SVN path : 
+
+<br>Date : June 5 , 2015
+<br>Time : 10:30 AM
+<br>Developer : Vishakha Kadam
+<br>Build No : 20150605-QueueStats_109_05
+<br>Fixed in update query of Queuestatsupdater , passing default queue =-100
+<br>
+<br> SVN path : 
+
+<br>Date  : May 28 , 2015
+<br>Time : 12:30 PM
+<br>Developer : Vishakha Kadam
+<br>Build No :  20150518-QueueStats_109_04
+<br>fixed to update contact waiting and duration if no contact waiting
+
+
+<br>Date  : May 20 , 2015
+<br>Time : 03:45 PM
+<br>Developer : Vishakha Kadam
+<br>Build No :  20150518-QueueStats_109_03
+<br>1.Added refresh functionality
+<br>2.Added fix to fetch main queues , and not self queues
+<br>3.Changes in ProcessorQueries.properties file to remove tg_channel configuration .Made relateive changes in code.
+<br>4.Change in mssql and mysql queries (properties file) to remove hardcoded primary db name , relative changes in code
+<br>Db task : #7314 
+
+<br>Date : March 23 , 2015
+<br>Time : 4:25:36 PM
+<br>Developer :  Vishakha Kadam
+<br>Revision  : --
+<br>Build No: 20141111-QueueStats_109_02
+<br>1.Implemented alrams 
+<br>2.Time format related changes , to get waiting duration in HH:mm
+<br>3.SIP related changes
+<br>
+<br>
+<br>SVN PATH : 
+
+
+<br>Date : Nov 11, 2014
+<br>Time : 2:58:36 PM
+<br>Developer : Vipin Singh & Vishakha Kadam
+<br>Revision  : --
+<br>Build No: 20141111-QueueStats_109_01
+<br>1.Processing voice and non-voice channels queuegroup wise And dashbaorad requirement specific for Fanuc
+<br>2.Fetching staffed agents, aux agents
+<br>3.Fetching Agent related data
+<br>Tasks #6507
+<br>Tasks #6538
+<br>Tasks #6498
+<br>SVN PATH : https://192.168.0.39/svn/DeveloperRelease/ThinConnect/QueueStats/QueueStats_20141111_0330_01.zip
+</body>
+</html>
